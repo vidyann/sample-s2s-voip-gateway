@@ -17,8 +17,6 @@ In other words, you can call a phone number and talk to Nova Sonic.
 
 Requirements:
 * A SIP account on a SIP server.  There are a number of options for this, whether it be a public VoIP provider or an account on your own PBX.
-* Your workstation should have Node.js installed.  This is required for CDK.  See https://nodejs.org/en/download.
-* Your workstation should have CDK installed.  See https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html.
 
 You should have some knowledge of Voice over IP (VoIP) and SIP.  
 
@@ -74,11 +72,6 @@ If you want to override addresses that are used with SIP traffic you can do so b
 
 ## Build
 
-The Nova S2S VoIP Gateway is a Java Maven project.  As such it requires a JDK to build.  The project is configured for
-Java 9 compatibility, but can be built with much more recent releases.  Here are some options:
-* Corretto: https://aws.amazon.com/corretto
-* OpenJDK: https://developers.redhat.com/products/openjdk/overview
-* Oracle: https://www.oracle.com/java/technologies/downloads/
 
 Additionally, Apache Maven is required to do the build.  This can be downloaded from https://maven.apache.org/ or installed on Amazon Linux using the command `sudo yum install maven`.  Unzip Maven in a place where you'll be able to find it again. See "Maven settings.xml" below for details about configuring Maven.
 
