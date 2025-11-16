@@ -1,12 +1,11 @@
-# Nova S2S VoIP Gateway
+# Azure Voice Live S2S VoIP Gateway
 
-This project contains an implementation of a SIP endpoint that acts as a gateway to Nova Sonic speech to speech.
+This project contains an implementation of a SIP endpoint that acts as a gateway to Azure Voice Live API.
 In other words, you can call a phone number and talk to Nova Sonic.
 
 <!-- TOC -->
 * [How does this work?](#how-does-this-work-)
-* [Getting started with ECS and CDK](#getting-started-with-ecs-and-cdk)
-* [Getting started with EC2](#getting-started-with-ec2)
+
 * [Third Party Dependencies of Note](#third-party-dependencies-of-note)
 * [Environment Variables](#environment-variables)
 * [Networking](#networking)
@@ -27,89 +26,14 @@ Please be aware that this is just a proof of concept and shouldn't be considered
 
 ## How does this work?  
 
-This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Nova Sonic, and bridge audio between RTP and Nova Sonic.  Audio received via RTP is sent to Nova Sonic and audio received from Nova Sonic is sent to the caller via RTP.
+This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Nova Sonic, and bridge audio between RTP and VoiceLiveSonic.  Audio received via RTP is sent to Voice live and audio received from Voice Live is sent to the caller via RTP.
 
-![](flow.png)
-
-## Getting started with ECS and CDK
-
-This application can run in an EC2 backed ECS container running in host mode.  This enables it to bind large UDP port ranges that are required for RTP.  This guide details how to install using infrastructure as code with CDK.
-
-![](architecture.png)
 
 Additional Requirements:
 * Your workstation should have Docker installed and Docker should be running.  This is required to build the Docker image.  See https://docs.docker.com/get-started/get-docker/.
 
-Installation:
-1. Build the Maven project.  See the build section for details.
-2. Copy `target/s2s-voip-gateway-<version>.jar` to the docker/ directory. 
-3. Copy cdk-ecs/cdk.context.json.template to cdk-ecs/cdk.context.json
-4. Open cdk-ecs/cdk.context.json in your favorite text editor and set each of the configuration parameters.
-5. From a terminal run the following:
-   ```
-   cd cdk-ecs
-   npm install
-   cdk bootstrap
-   cdk deploy
-   ```
-6. Once the project is fully deployed try calling the phone number or extension for your SIP account.  The gateway should answer immediately and greet you.
-7. Converse with Nova Sonic. 
 
-What does this CDK stack do?
-* Create a VPC for your installation
-* Create VPC endpoints for Elastic Container Registry (ECR)
-* Create an Elastic Container Service (ECS) cluster
-* Create an auto-scaling group
-* Create task execution and task roles
-* Create secrets for your SIP credentials
-* Create a task and service for VoIP Gateway
-
-Clean-up:
 ```
-cd cdk-ecs
-cdk destroy
-```
-
-## Getting started with EC2
-
-The Nova S2S VoIP Gateway can run in a configuration as simple as a single EC2 instance.  If you're doing development and testing changes this is the recommended approach.  
-
-We've included a CDK stack to create an EC2 instance with the proper permissions and security groups configured.  To install it, do the following:
-1. If you don't already have a keypair, create one from the EC2 console.  This is needed to authenticate to your instance.
-2. (optional) If you prefer to use an existing VPC, edit cdk-ec2-instance/bin/cdk.ts, uncomment the line with vpcId and update it to your existing VPC.  The VPC must have public subnets.
-3. Open cdk-ec2-instance/bin/cdk.ts in a text editor and update keyPairName to the name of the existing or newly created keypair.
-4. From a terminal run the following:
-   ```
-   cd cdk-ec2-instance
-   npm install
-   cdk bootstrap
-   cdk deploy
-   ```
-5. CDK will output the IP address of your newly created EC2 instance.
-
-What does this CDK stack do?
-* Create a new VPC for your instance (unless configured to use an existing one)  
-* Create an IAM role for your instance
-* Create security groups for your instance
-* Create the EC2 instance with Amazon Linux, configured to install a JDK (Amazon Corretto), Maven, and Git.
-
-To run the project:
-1. SSH into the EC2 instance using the keypair from step 1 of the installation guide and IP address from step 5.
-2. Copy the project from your local computer or git clone it to your EC2 instance.
-3. Configure your Maven settings.xml as detailed in the Maven settings.xml section.
-4. Run the project as follows: `./run.sh` (this will compile and execute the main class)
-5. Watch for the SIP registration.  Make sure it gets a 200 response.  If it doesn't your credentials may be incorrect.
-6. Call the phone number or extension for your SIP line.  The gateway should answer immediately and greet you.
-7. Converse with Nova Sonic.
-8. Hit Ctrl-C to exit.
-
-Clean-up:
-
-From a terminal run the following:
-   ```
-   cd cdk-ec2-instance
-   cdk destroy
-   ```
 
 ## Third Party Dependencies of Note
 
@@ -128,8 +52,6 @@ This project can be configured to run via the `.mjsip-ua` configuration file OR 
 * MEDIA_ADDRESS - the IP address to use for RTP media traffic.  By default it will source the address from your network interfaces.
 * MEDIA_PORT_BASE - the first RTP port to use for audio traffic
 * MEDIA_PORT_COUNT - the size of the RTP port pool used for audio traffic
-* NOVA_PROMPT - the prompt to use with Amazon Nova.  The default value can be found in NovaMediaConfig.java.
-* NOVA_VOICE_ID - the Amazon Nova Sonic voice to use.  See https://docs.aws.amazon.com/nova/latest/userguide/available-voices.html.  Default is matthew.
 * SIP_KEEPALIVE_TIME - frequency in milliseconds to send keep-alive packets
 * SIP_SERVER - the hostname or IP address of the SIP server to register with.  Required if running in environment variable mode.
 * SIP_USER - equivalent of sip-user from `.mjsip-ua`, generally the same as AUTH_USER
