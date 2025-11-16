@@ -24,7 +24,7 @@ Please be aware that this is just a proof of concept and shouldn't be considered
 
 ## How does this work?  
 
-This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Voice live, and bridge audio between RTP and VoiceLiveSonic.  Audio received via RTP is sent to Voice live and audio received from Voice Live is sent to the caller via RTP.
+This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Voice live, and bridge audio between RTP and VoiceLive.  Audio received via RTP is sent to Voice live and audio received from Voice Live is sent to the caller via RTP.
 
 
 Additional Requirements:
