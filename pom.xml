@@ -8,15 +8,8 @@
     </properties>
     <repositories>
         <repository>
-            <id>github</id>
-            <name>GitHub haumacher/mjSIP Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/haumacher/mjSIP</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
     <build>
@@ -25,8 +18,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>9</source>
-                    <target>9</target>
+                    <source>21</source>
+                    <target>21</target>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -40,7 +33,16 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <configuration>
-                    <!-- put your configurations here -->
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
                 <executions>
                     <execution>
@@ -59,7 +61,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>com.example.s2s.voipgateway.NovaSonicVoipGateway</mainClass>
+                            <mainClass>com.example.s2s.voipgateway.VoiceLiveVoipGateway</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -68,8 +70,8 @@
     </build>
     <dependencies>
         <dependency>
-            <groupId>org.mjsip</groupId>
-            <artifactId>mjsip-ua</artifactId>
+            <groupId>com.github.haumacher</groupId>
+            <artifactId>mjSIP</artifactId>
             <version>2.0.5</version>
         </dependency>
         <dependency>
@@ -121,6 +123,28 @@
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
             <version>3.6.2</version>
+        </dependency>
+        <!-- Azure OpenAI Realtime API via WebSocket -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
+        </dependency>
+        <!-- Azure Speech Voice Live API (official SDK) -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-ai-voicelive</artifactId>
+            <version>1.0.0-beta.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+            <version>1.11.0</version>
         </dependency>
     </dependencies>
 </project>

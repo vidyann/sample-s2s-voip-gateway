@@ -1,0 +1,191 @@
+package com.example.s2s.voipgateway.voicelive;
+
+import com.google.gson.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.sound.sampled.*;
+import java.io.File;
+import java.io.IOException;
+
+/**
+ * Simple test program to send audio file to Voice Live API and receive response.
+ */
+public class VoiceLiveAudioTest {
+    
+    private static final Logger LOG = LoggerFactory.getLogger(VoiceLiveAudioTest.class);
+    
+    public static void main(String[] args) throws Exception {
+        if (args.length < 1) {
+            System.err.println("Usage: java VoiceLiveAudioTest <audio-file.wav>");
+            System.err.println("Example: java VoiceLiveAudioTest hello-how.wav");
+            System.exit(1);
+        }
+        
+        String audioFile = args[0];
+        
+        // Load configuration from environment
+        VoiceLiveConfig config = new VoiceLiveConfig();
+        LOG.info("Voice Live Configuration:");
+        LOG.info("  Endpoint: {}", config.getEndpoint());
+        LOG.info("  Model: {}", config.getModel());
+        LOG.info("  API Version: {}", config.getApiVersion());
+        
+        // Create event handler
+        VoiceLiveEventHandler handler = new VoiceLiveEventHandler() {
+            @Override
+            public void onSessionCreated(String sessionId, JsonObject session) {
+                LOG.info("Session created: {}", sessionId);
+            }
+            
+            @Override
+            public void onSessionUpdated(String sessionId, JsonObject session) {
+                LOG.info("Session updated: {}", sessionId);
+            }
+            
+            @Override
+            public void onResponseAudioDelta(String responseId, String itemId, int outputIndex, 
+                                             int contentIndex, String delta) {
+                LOG.info("Received audio response (chunk size: {} bytes)", delta.length());
+            }
+            
+            @Override
+            public void onResponseAudioDone(String responseId, String itemId) {
+                LOG.info("Audio response complete");
+            }
+            
+            @Override
+            public void onAudioTimestamp(String responseId, String itemId, int audioOffsetMs, 
+                                        int audioDurationMs, String text, String timestampType) {
+                LOG.info("Timestamp: {} at {}ms", text, audioOffsetMs);
+            }
+            
+            @Override
+            public void onViseme(String responseId, String itemId, int audioOffsetMs, int visemeId) {
+                LOG.debug("Viseme: {} at {}ms", visemeId, audioOffsetMs);
+            }
+            
+            @Override
+            public void onResponseTextDelta(String responseId, String itemId, int outputIndex, 
+                                           int contentIndex, String delta) {
+                System.out.print(delta);
+            }
+            
+            @Override
+            public void onTranscriptionCompleted(String itemId, String transcript) {
+                LOG.info("Transcription: {}", transcript);
+            }
+            
+            @Override
+            public void onError(String type, String code, String message, JsonObject event) {
+                LOG.error("Error: {} - {}", code, message);
+            }
+            
+            @Override
+            public void onUnhandledEvent(String type, JsonObject event) {
+                LOG.debug("Unhandled event: {}", type);
+            }
+        };
+        
+        // Create Voice Live client
+        VoiceLiveClient client = new VoiceLiveClient(config, handler);
+        
+        // Connect
+        LOG.info("Connecting to Voice Live API...");
+        client.connect();
+        
+        // Wait for connection
+        int retries = 0;
+        while (!client.isOpen() && retries < 20) {
+            Thread.sleep(500);
+            retries++;
+        }
+        
+        if (!client.isOpen()) {
+            LOG.error("Failed to connect to Voice Live API");
+            System.exit(1);
+        }
+        
+        LOG.info("Connected successfully!");
+        
+        // Wait for session.created event
+        Thread.sleep(2000);  // Increased from 1s to 2s
+        
+        // Send session configuration with Voice Live features
+        LOG.info("Configuring session...");
+        JsonObject sessionConfig = VoiceLiveClient.createDefaultSessionConfig();
+        client.sendSessionConfig(sessionConfig);
+        
+        // Wait longer for session to be fully updated and ready for audio
+        Thread.sleep(3000);  // Increased from 1s to 3s
+        
+        // Read and send audio file
+        LOG.info("Reading audio file: {}", audioFile);
+        byte[] audioData = readAudioFile(audioFile);
+        
+        LOG.info("Sending audio ({} bytes)...", audioData.length);
+        client.sendAudioInput(audioData);
+        
+        // Send silence padding so VAD can detect end of speech
+        // VAD needs 500ms of silence to detect end-of-utterance
+        LOG.info("Sending silence padding for VAD end-of-speech detection...");
+        int silenceDurationMs = 1000;  // 1 second of silence (more than 500ms required)
+        int sampleRate = 24000;  // 24kHz
+        int bytesPerSample = 2;  // 16-bit PCM = 2 bytes per sample
+        int silenceBytes = (sampleRate * silenceDurationMs / 1000) * bytesPerSample;
+        byte[] silence = new byte[silenceBytes];  // All zeros = silence
+        client.sendAudioInput(silence);
+        
+        // Note: No need to commit - Azure Semantic VAD will automatically detect end of speech
+        // and trigger response generation
+        LOG.info("Audio and silence sent. Waiting for VAD to detect end of speech and generate response...");
+        
+        // Wait for response (VAD will auto-detect silence and trigger response)
+        LOG.info("Waiting for response...");
+        Thread.sleep(20000);  // Wait for VAD processing + response generation
+        
+        // Close
+        LOG.info("Closing connection...");
+        client.close();
+        
+        LOG.info("Test complete!");
+    }
+    
+    /**
+     * Reads a WAV file and converts it to PCM16 at 24kHz (Voice Live format).
+     */
+    private static byte[] readAudioFile(String filePath) throws IOException, UnsupportedAudioFileException {
+        File file = new File(filePath);
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(file);
+        AudioFormat sourceFormat = audioStream.getFormat();
+        
+        LOG.info("Source audio format: {} Hz, {} channels, {} bits", 
+                 sourceFormat.getSampleRate(), 
+                 sourceFormat.getChannels(), 
+                 sourceFormat.getSampleSizeInBits());
+        
+        // Voice Live expects PCM16 at 24kHz mono
+        AudioFormat targetFormat = new AudioFormat(
+            AudioFormat.Encoding.PCM_SIGNED,
+            24000,  // 24kHz
+            16,     // 16-bit
+            1,      // Mono
+            2,      // Frame size (2 bytes per sample)
+            24000,  // Frame rate
+            false   // Little-endian
+        );
+        
+        // Convert if necessary
+        AudioInputStream convertedStream = audioStream;
+        if (!sourceFormat.matches(targetFormat)) {
+            LOG.info("Converting to target format: 24kHz PCM16 mono");
+            convertedStream = AudioSystem.getAudioInputStream(targetFormat, audioStream);
+        }
+        
+        // Read all bytes
+        byte[] audioData = convertedStream.readAllBytes();
+        convertedStream.close();
+        
+        return audioData;
+    }
+}
