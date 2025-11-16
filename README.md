@@ -1,7 +1,7 @@
 # Azure Voice Live S2S VoIP Gateway
 
 This project contains an implementation of a SIP endpoint that acts as a gateway to Azure Voice Live API.
-In other words, you can call a phone number and talk to Nova Sonic.
+In other words, you can call a phone number and talk to Azure Voice Live API .
 
 <!-- TOC -->
 * [How does this work?](#how-does-this-work-)
@@ -24,7 +24,7 @@ Please be aware that this is just a proof of concept and shouldn't be considered
 
 ## How does this work?  
 
-This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Nova Sonic, and bridge audio between RTP and VoiceLiveSonic.  Audio received via RTP is sent to Voice live and audio received from Voice Live is sent to the caller via RTP.
+This application acts as a SIP user agent.  When it starts it registers with a SIP server.  Upon receiving a call it will answer, establish the media session (over RTP), start a session with Voice live, and bridge audio between RTP and VoiceLiveSonic.  Audio received via RTP is sent to Voice live and audio received from Voice Live is sent to the caller via RTP.
 
 
 Additional Requirements:
