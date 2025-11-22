@@ -37,7 +37,10 @@ public class VoiceLiveStreamerFactory implements StreamerFactory {
         // AudioReceiver: Receives RTP FROM SIP caller → Sends to Voice Live (INPUT)
         // AudioTransmitter: Reads FROM Voice Live response → Sends RTP TO SIP caller (OUTPUT)
         AudioReceiver rx = new VoiceLiveAudioInput(handler);  // SIP → Voice Live
-        AudioTransmitter tx = new VoiceLiveAudioOutput(handler);  // Voice Live → SIP
+        VoiceLiveAudioOutput tx = new VoiceLiveAudioOutput(handler);  // Voice Live → SIP
+        
+        // Set audio output reference for interrupt handling
+        handler.setAudioOutput(tx);
         
         // Configure streamer options
         StreamerOptions options = StreamerOptions.builder()

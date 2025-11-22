@@ -84,10 +84,19 @@ public class VoiceLiveStreamingTest {
                             LOG.info("Event stream completed");
                             completionLatch.countDown();
                         }
-                    );
+                );
                 
-                // Create stream handler
-                VoiceLiveStreamHandler handler = new VoiceLiveStreamHandler(session);
+                // Create stream handler with voice, instructions and transcription model from config
+                VoiceLiveStreamHandler handler = new VoiceLiveStreamHandler(
+                    session, 
+                    config.getVoice(), 
+                    config.getInstructions(), 
+                    config.getTranscriptionModel(), 
+                    config.getTranscriptionLanguage(), 
+                    config.getMaxResponseOutputTokens(),
+                    false,  // proactiveGreetingEnabled
+                    ""      // proactiveGreeting
+                );
                 
                 // Wait for session to be ready (SESSION_UPDATED event) - reactively!
                 LOG.info("⏳ Initializing handler and waiting for session to be ready...");

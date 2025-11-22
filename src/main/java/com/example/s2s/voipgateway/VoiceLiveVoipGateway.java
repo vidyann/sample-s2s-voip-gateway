@@ -23,6 +23,7 @@ import org.mjsip.ua.registration.RegistrationClient;
 import org.mjsip.ua.streamer.StreamerFactory;
 import org.slf4j.LoggerFactory;
 import org.zoolu.net.SocketAddress;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -155,6 +156,10 @@ public class VoiceLiveVoipGateway extends RegisteringMultipleUAS {
                 uaConfig.setRegister(Boolean.parseBoolean(environ.getOrDefault("REGISTER_WITH_SIP_SERVER", "false")));
                 // Set default media descriptors for localhost mode
                 mediaConfig.setMediaDescs(createDefaultMediaDescs());
+                // Set via address to avoid network unreachable errors during normalize
+                if (isConfigured(environ.get("SIP_VIA_ADDR"))) {
+                    sipConfig.setViaAddrIPv4(environ.get("SIP_VIA_ADDR"));
+                }
             }
 
             sipConfig.normalize();
@@ -171,7 +176,16 @@ public class VoiceLiveVoipGateway extends RegisteringMultipleUAS {
                     LOG.info("✓ Voice Live session started successfully");
                     
                     // Create handler with session - clean dependency flow!
-                    VoiceLiveStreamHandler streamHandler = new VoiceLiveStreamHandler(session);
+                    VoiceLiveStreamHandler streamHandler = new VoiceLiveStreamHandler(
+                        session, 
+                        voiceLiveConfig.getVoice(), 
+                        voiceLiveConfig.getInstructions(), 
+                        voiceLiveConfig.getTranscriptionModel(), 
+                        voiceLiveConfig.getTranscriptionLanguage(), 
+                        voiceLiveConfig.getMaxResponseOutputTokens(),
+                        voiceLiveConfig.isProactiveGreetingEnabled(),
+                        voiceLiveConfig.getProactiveGreeting()
+                    );
                     
                     // Wait for session initialization to complete (SESSION_UPDATED event)
                     return streamHandler.initialize()
@@ -181,9 +195,11 @@ public class VoiceLiveVoipGateway extends RegisteringMultipleUAS {
                             LOG.info("  - Deep noise suppression");
                             LOG.info("  - Server-side echo cancellation");
                             LOG.info("  - End-of-utterance detection");
-                            LOG.info("  - Azure HD voice (en-US-Ava:DragonHDLatestNeural)");
+                            LOG.info("  - Azure HD voice ({})", voiceLiveConfig.getVoice());
                             LOG.info("  - Whisper transcription");
                             LOG.info("  - Word timestamps");
+                            LOG.info("  - Proactive greeting: {}", 
+                                voiceLiveConfig.isProactiveGreetingEnabled() ? "enabled" : "disabled");
                         })
                         .thenReturn(streamHandler);
                 })
@@ -200,10 +216,10 @@ public class VoiceLiveVoipGateway extends RegisteringMultipleUAS {
                     VoiceLiveVoipGateway gateway = new VoiceLiveVoipGateway(sipProvider, portConfig.createPool(), 
                                                                              serviceConfig, uaConfig, mediaConfig, voiceFactory);
                     
-                    return reactor.core.publisher.Mono.never(); // Keep alive
+                    return Mono.never(); // Keep alive
                 })
                 .doOnError(error -> {
-                    LOG.error("Failed to start Voice Live session", error);
+                    LOG.error("❌ Failed to start Voice Live session", error);
                     System.exit(1);
                 })
                 .block();

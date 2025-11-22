@@ -29,6 +29,16 @@ public class VoiceLiveStreamHandler {
     private static final Logger LOG = LoggerFactory.getLogger(VoiceLiveStreamHandler.class);
     
     private final VoiceLiveSessionAsyncClient session;
+    private final String voice;
+    private final String instructions;
+    private final String transcriptionModel;
+    private final String transcriptionLanguage;
+    private final Integer maxResponseOutputTokens;
+    private final boolean proactiveGreetingEnabled;
+    private final String proactiveGreeting;
+    private volatile boolean isResponseDone = false; // Track when Voice Live finishes current response
+    private volatile boolean conversationStarted = false;
+    private VoiceLiveAudioOutput audioOutput;
     private final BlockingQueue<byte[]> outputAudioQueue = new LinkedBlockingQueue<>();
     private volatile boolean isSessionReady = false;
     private volatile boolean isStreamingAudio = false;
@@ -40,6 +50,8 @@ public class VoiceLiveStreamHandler {
     private static final int SAMPLE_RATE = 24000;
     private static final int BYTES_PER_SAMPLE = 2; // PCM16
     private static final int MIN_CHUNK_SIZE_BYTES = (MIN_CHUNK_SIZE_MS * SAMPLE_RATE * BYTES_PER_SAMPLE) / 1000;
+    private static final int MAX_OUTPUT_CHUNK_MS = 200; // cap Voice Live deltas to ~200ms per chunk
+    private static final int MAX_OUTPUT_CHUNK_BYTES = (MAX_OUTPUT_CHUNK_MS * SAMPLE_RATE * BYTES_PER_SAMPLE) / 1000;
     private byte[] audioBuffer = new byte[MIN_CHUNK_SIZE_BYTES];
     private int bufferPos = 0;
     
@@ -47,8 +59,30 @@ public class VoiceLiveStreamHandler {
      * Creates a stream handler for the given Voice Live session.
      * No circular dependency - session is passed in!
      */
-    public VoiceLiveStreamHandler(VoiceLiveSessionAsyncClient session) {
+    public VoiceLiveStreamHandler(VoiceLiveSessionAsyncClient session, 
+                                    String voice, 
+                                    String instructions,
+                                    String transcriptionModel,
+                                    String transcriptionLanguage,
+                                    Integer maxResponseOutputTokens,
+                                    boolean proactiveGreetingEnabled,
+                                    String proactiveGreeting) {
         this.session = session;
+        this.voice = voice;
+        this.instructions = instructions;
+        this.transcriptionModel = transcriptionModel;
+        this.transcriptionLanguage = transcriptionLanguage;
+        this.maxResponseOutputTokens = maxResponseOutputTokens;
+        this.proactiveGreetingEnabled = proactiveGreetingEnabled;
+        this.proactiveGreeting = proactiveGreeting;
+        LOG.info("Voice Live max_response_output_tokens set to: {}", maxResponseOutputTokens);
+    }
+    
+    /**
+     * Set the audio output reference (for buffer clearing on interrupts).
+     */
+    public void setAudioOutput(VoiceLiveAudioOutput audioOutput) {
+        this.audioOutput = audioOutput;
     }
     
     /**
@@ -79,8 +113,8 @@ public class VoiceLiveStreamHandler {
      * Creates session options with Voice Live enhancements.
      */
     private VoiceLiveSessionOptions createSessionOptions() {
-        // Azure semantic VAD configuration
-        ServerVadTurnDetection vad = new ServerVadTurnDetection()
+        // Server VAD configuration (original working config)
+        AzureSemanticVadTurnDetection vad = new AzureSemanticVadTurnDetection()
             .setThreshold(0.3)
             .setPrefixPaddingMs(300)
             .setSilenceDurationMs(500)
@@ -88,21 +122,39 @@ public class VoiceLiveStreamHandler {
             .setAutoTruncate(true)
             .setCreateResponse(true);
         
-        // Audio transcription
-        AudioInputTranscriptionOptions transcription = new AudioInputTranscriptionOptions(
-            AudioInputTranscriptionOptionsModel.WHISPER_1);
+        // Audio transcription - use configured model
+        AudioInputTranscriptionOptionsModel transcriptionModelEnum = 
+            "WHISPER_1".equalsIgnoreCase(transcriptionModel) 
+                ? AudioInputTranscriptionOptionsModel.WHISPER_1 
+                : AudioInputTranscriptionOptionsModel.AZURE_SPEECH;
+        AudioInputTranscriptionOptions transcription = new AudioInputTranscriptionOptions(transcriptionModelEnum);
         
-        return new VoiceLiveSessionOptions()
-            .setInstructions("You are a helpful AI voice assistant. You MUST always respond in English only, regardless of the language spoken by the user.")
+        // Set language for Azure Speech (Whisper supports auto-detection)
+        if (transcriptionModelEnum == AudioInputTranscriptionOptionsModel.AZURE_SPEECH) {
+            transcription.setLanguage(transcriptionLanguage);
+            LOG.info("Azure Speech transcription language set to: {}", transcriptionLanguage);
+        }
+
+        
+        VoiceLiveSessionOptions options = new VoiceLiveSessionOptions()
+            .setInstructions(instructions)
             .setModalities(Arrays.asList(InteractionModality.TEXT, InteractionModality.AUDIO))
-            .setVoice(BinaryData.fromObject(new AzureStandardVoice("en-US-Ava:DragonHDLatestNeural")))
+            .setVoice(BinaryData.fromObject(new AzureStandardVoice(voice)))
             .setInputAudioFormat(InputAudioFormat.PCM16)
             .setOutputAudioFormat(OutputAudioFormat.PCM16)
             .setInputAudioSamplingRate(24000)
             .setTurnDetection(vad)
-            .setInputAudioNoiseReduction(new AudioNoiseReduction(AudioNoiseReductionType.NEAR_FIELD))
+            .setInputAudioNoiseReduction(new AudioNoiseReduction(AudioNoiseReductionType.AZURE_DEEP_NOISE_SUPPRESSION))
             .setInputAudioEchoCancellation(new AudioEchoCancellation())
             .setInputAudioTranscription(transcription);
+        
+        // Note: max_response_output_tokens parameter stored in config (value: {}) but not yet supported by Azure SDK
+        // Relying on system instructions for brevity control instead
+        LOG.info("✓ Session configured with brevity instructions (max_response_output_tokens target: {})", maxResponseOutputTokens);
+        
+        return options;
+    
+            // TODO: Add max_response_output_tokens to VoiceLiveSessionOptions when SDK supports it
             // TODO: Add output audio timestamp types when API is available
             //.setOutputAudioTimestampTypes(Arrays.asList(OutputAudioTimestampType.WORD));
     }
@@ -113,6 +165,12 @@ public class VoiceLiveStreamHandler {
      */
     private void handleEvent(SessionUpdate event) {
         LOG.info("📩 Received event: {}", event.getType());
+        
+        // Reset flag when new response starts
+        if (event.getType().equals("response.created")) {
+            isResponseDone = false;
+        }
+        
         switch (event) {
             case SessionUpdateSessionCreated created ->
                 handleSessionCreated(created);
@@ -127,7 +185,9 @@ public class VoiceLiveStreamHandler {
             case SessionUpdateResponseTextDelta textDelta ->
                 handleResponseTextDelta(textDelta);
             case SessionUpdateInputAudioBufferSpeechStarted speechStart ->
-                LOG.info("🎤 Speech detected");
+                // Voice Live handles interruptions server-side via setInterruptResponse(true)
+                // No need to clear local buffers - Voice Live stops sending audio automatically
+                LOG.info("🎤 Speech detected - Voice Live handling interruption server-side");
             case SessionUpdateInputAudioBufferSpeechStopped speechStop ->
                 LOG.info("🤔 Speech ended - processing...");
             case SessionUpdateConversationItemInputAudioTranscriptionCompleted transcription ->
@@ -147,19 +207,70 @@ public class VoiceLiveStreamHandler {
     private void handleSessionUpdated(SessionUpdateSessionUpdated updated) {
         LOG.info("✓ Voice Live session configured successfully");
         isSessionReady = true;
+        
+        // Debug logging
+        LOG.info("🔍 Proactive greeting check: enabled={}, conversationStarted={}", 
+            proactiveGreetingEnabled, conversationStarted);
+        
+        // Send proactive greeting if enabled (after session is ready)
+        if (proactiveGreetingEnabled && !conversationStarted) {
+            conversationStarted = true;
+            LOG.info("📢 Sending proactive greeting request");
+            session.sendEvent(new ClientEventResponseCreate())
+                .doOnSuccess(v -> LOG.info("✓ Proactive greeting request sent - bot will speak first"))
+                .doOnError(error -> LOG.error("❌ Failed to send proactive greeting request", error))
+                .subscribe();
+        } else if (!proactiveGreetingEnabled) {
+            LOG.info("⏸ Proactive greeting disabled - waiting for user to speak first");
+        } else {
+            LOG.info("⏭ Skipping proactive greeting - conversation already started");
+        }
+        
         sessionReadyFuture.complete(null); // Signal that session is ready!
     }
     
     private void handleResponseAudioDelta(SessionUpdateResponseAudioDelta event) {
         byte[] audioData = event.getDelta();
-        if (audioData != null && audioData.length > 0) {
-            outputAudioQueue.offer(audioData);
-            LOG.info("← Queued audio chunk: {} bytes (queue size: {})", audioData.length, outputAudioQueue.size());
+        if (audioData == null || audioData.length == 0) {
+            return;
         }
+
+        if (audioData.length <= MAX_OUTPUT_CHUNK_BYTES) {
+            enqueueOutputChunk(audioData);
+            return;
+        }
+
+        int offset = 0;
+        int chunkCount = 0;
+        while (offset < audioData.length) {
+            int nextSize = Math.min(MAX_OUTPUT_CHUNK_BYTES, audioData.length - offset);
+            byte[] chunk = Arrays.copyOfRange(audioData, offset, offset + nextSize);
+            enqueueOutputChunk(chunk);
+            offset += nextSize;
+            chunkCount++;
+        }
+        LOG.debug("Split {} byte Voice Live chunk into {} sub-chunks (max {} bytes)",
+            audioData.length, chunkCount, MAX_OUTPUT_CHUNK_BYTES);
+    }
+
+    private void enqueueOutputChunk(byte[] chunk) {
+        boolean offered = outputAudioQueue.offer(chunk);
+        if (!offered) {
+            LOG.warn("⚠ Dropped Voice Live output chunk ({} bytes) - queue full", chunk.length);
+            return;
+        }
+        LOG.info("← Queued audio chunk: {} bytes (queue size: {}) [handler: {}]", 
+                 chunk.length, outputAudioQueue.size(), System.identityHashCode(this));
     }
     
     private void handleResponseAudioDone(SessionUpdate event) {
         LOG.info("✓ Response audio complete");
+        isResponseDone = true; // Voice Live finished sending audio for this response
+        
+        // Notify audio output that response is complete (for short pre-call responses)
+        if (audioOutput != null) {
+            LOG.info("✓ Notifying audio output of pending response completion");
+        }
     }
     
     private void handleAudioTimestamp(SessionUpdateResponseAudioTimestampDelta event) {
@@ -296,9 +407,19 @@ public class VoiceLiveStreamHandler {
      * @return PCM16 audio data, or null if timeout
      */
     public byte[] getAudioOutput(long timeoutMs) {
+        int queueSize = outputAudioQueue.size();
+        LOG.info("🔍 getAudioOutput() called - queue size: {}, timeout: {}ms", queueSize, timeoutMs);
+        
         try {
-            return outputAudioQueue.poll(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+            byte[] result = outputAudioQueue.poll(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (result != null) {
+                LOG.info("✓ Retrieved audio chunk: {} bytes (remaining: {})", result.length, outputAudioQueue.size());
+            } else {
+                LOG.warn("⚠ getAudioOutput() returned null - queue size: {}", outputAudioQueue.size());
+            }
+            return result;
         } catch (InterruptedException e) {
+            LOG.error("❌ getAudioOutput() interrupted", e);
             Thread.currentThread().interrupt();
             return null;
         }
@@ -316,6 +437,13 @@ public class VoiceLiveStreamHandler {
      */
     public boolean isSessionReady() {
         return isSessionReady;
+    }
+    
+    /**
+     * Check if Voice Live has finished sending audio for current response.
+     */
+    public boolean isResponseDone() {
+        return isResponseDone;
     }
     
     /**

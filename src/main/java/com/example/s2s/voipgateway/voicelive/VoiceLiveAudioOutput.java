@@ -27,6 +27,7 @@ public class VoiceLiveAudioOutput implements AudioTransmitter {
     private static final Logger LOG = LoggerFactory.getLogger(VoiceLiveAudioOutput.class);
     
     private final VoiceLiveStreamHandler handler;
+    private VoiceLiveAudioOutputStream outputStream;
     
     /**
      * Creates a new Voice Live audio output receiver.
@@ -35,6 +36,15 @@ public class VoiceLiveAudioOutput implements AudioTransmitter {
      */
     public VoiceLiveAudioOutput(VoiceLiveStreamHandler handler) {
         this.handler = handler;
+    }
+    
+    /**
+     * Clear all buffered audio (for interrupts).
+     */
+    public void clearBuffer() {
+        if (outputStream != null) {
+            outputStream.clearBuffer();
+        }
     }
     
     @Override
@@ -51,14 +61,14 @@ public class VoiceLiveAudioOutput implements AudioTransmitter {
         LOG.info("  Remote: {}:{}", remote_addr, remote_port);
         
         // Create input stream that reads FROM Voice Live and sends TO SIP
-        VoiceLiveAudioOutputStream inputStream = new VoiceLiveAudioOutputStream(handler);
+        this.outputStream = new VoiceLiveAudioOutputStream(handler);
         LOG.info("VoiceLiveAudioOutputStream initialized (PCM16 24kHz → µ-law 8kHz)");
         LOG.info("Voice Live audio sender thread started");
         
         // Create RTP sender that reads from Voice Live output stream
         RtpStreamSender sender = new RtpStreamSender(
             options,
-            inputStream,       // Reads Voice Live audio from here
+            this.outputStream,       // Reads Voice Live audio from here
             true,              // Use source for audio input
             payload_type,
             payloadFormat,
