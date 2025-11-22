@@ -1,6 +1,6 @@
 package com.example.s2s.voipgateway.voicelive;
 
-import com.example.s2s.voipgateway.nova.transcode.UlawToPcmTranscoder;
+import com.example.s2s.voipgateway.voicelive.transcode.UlawToPcmTranscoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

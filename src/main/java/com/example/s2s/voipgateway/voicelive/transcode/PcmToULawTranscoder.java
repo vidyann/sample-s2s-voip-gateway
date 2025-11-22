@@ -1,4 +1,4 @@
-package com.example.s2s.voipgateway.nova.transcode;
+package com.example.s2s.voipgateway.voicelive.transcode;
 
 /**
  * Implementation of ITU-T G.711 μ-law encoding for transcoding linear PCM to μ-law

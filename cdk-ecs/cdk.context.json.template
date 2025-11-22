@@ -1,8 +1,0 @@
-{
-  "config": {
-    "sipServer":"sip.server.dev",
-    "sipUsername": "username",
-    "sipPassword": "password",
-    "sipRealm": "realm"
-  }
-}

@@ -1,4 +1,4 @@
-package com.example.s2s.voipgateway.nova.transcode;
+package com.example.s2s.voipgateway.voicelive.transcode;
 
 /**
  * A utility for converting µ-law (G.711) encoded audio to Linear PCM.
