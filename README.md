@@ -37,10 +37,76 @@ Additional Requirements:
 
 This project utilizes a fork of the mjSIP project, which can be found at https://github.com/haumacher/mjSIP, which is licensed under GPLv2.
 
+## Configuration
+
+This project supports three configuration methods, each serving different use cases:
+
+### 1. **start-gateway1.ps1** (Recommended for Development)
+PowerShell script that sets environment variables and launches the gateway. Best for:
+- Quick development and testing
+- Local testing with hardcoded values
+- Windows environments
+
+Usage:
+```powershell
+.\start-gateway1.ps1
+```
+
+### 2. **environment.template** (Recommended for Production)
+Template for environment variables. Best for:
+- Production deployments
+- Docker/container environments
+- CI/CD pipelines
+- Linux/Unix environments
+
+Usage:
+```bash
+# Copy and customize
+cp environment.template .env
+# Edit .env with your values
+# Source it before running
+source .env
+java -jar target/voicelive-sip-gateway-sample-1.0.0-SNAPSHOT.jar
+```
+
+### 3. **.mjsip-ua.template** (Advanced SIP Configuration)
+Configuration file for low-level SIP/RTP settings. Best for:
+- Fine-tuning RTP port ranges
+- Customizing keep-alive timers
+- Configuring symmetric RTP
+- Adjusting audio codecs/formats
+
+Usage:
+```bash
+# Copy to .mjsip-ua in project root or home directory
+cp .mjsip-ua.template .mjsip-ua
+# Edit with your SIP settings
+# The application will auto-load this file in local mode
+```
+
+**Configuration Priority**: 
+- If `SIP_SERVER` environment variable is set → Uses environment variables (modes 1 or 2)
+- If `SIP_SERVER` is not set → Loads `.mjsip-ua` file, then overrides with any environment variables
+
 ## Environment Variables
 
-This project can be configured to run via the `.mjsip-ua` configuration file OR by setting environment variables.  Below is a list of the environment variables in use:
+Below is a list of the environment variables in use:
 
+### Voice Live Configuration (Required)
+* VOICE_LIVE_ENDPOINT - Azure Cognitive Services endpoint (e.g., https://your-resource.cognitiveservices.azure.com/)
+* VOICE_LIVE_API_KEY - Your Azure API key
+* VOICE_LIVE_MODEL - Model to use (e.g., gpt-4.1)
+* VOICE_LIVE_VOICE - Neural voice to use (e.g., en-IN-AartiIndicNeural)
+* VOICE_LIVE_INSTRUCTIONS - System instructions for the AI assistant
+* VOICE_LIVE_MAX_RESPONSE_OUTPUT_TOKENS - Maximum response length (default: 200)
+* VOICE_LIVE_TRANSCRIPTION_MODEL - AZURE_SPEECH or WHISPER_1
+* VOICE_LIVE_TRANSCRIPTION_LANGUAGE - Language code (e.g., en-IN, en-US, hi-IN)
+
+### Proactive Greeting Configuration
+* VOICE_LIVE_PROACTIVE_GREETING_ENABLED - true|false to enable bot greeting first
+* VOICE_LIVE_PROACTIVE_GREETING - The greeting message (e.g., "Hello! How can I help you today?")
+
+### SIP Configuration
 * AUTH_USER - username for authentication with SIP server
 * AUTH_PASSWORD - password for authentication with SIP server
 * AUTH_REALM - the SIP realm to use for authentication
@@ -101,13 +167,9 @@ mjSIP is distributed from a GitHub Maven repository.  Unfortunately, GitHub Mave
 
 ## Developer Guide
 
-The entrypoint for the application is NovaSonicVoipGateway.java.  This class contains a main method and configures the user agent based on what it finds in environment variables.
+The entrypoint for the application is VoiceLiveVoipGateway.java. This class contains a main method and configures the user agent based on what it finds in environment variables.
 
-The main entry point for the Nova integration is in NovaStreamerFactory.java, where the Bedrock client is instantiated and the audio streams are established.
-
-By default, the gateway includes a toolset that gives Nova Sonic the ability to retrieve the date and time, but this can be extended to do much more.  The example tools can be found in com.example.s2s.voipgateway.nova.tools.
-
-New tools can be developed by extending the AbstractNovaS2SEventHandler class and implementing the functionality you desire.  See the javadoc in AbstractNovaS2SEventHandler for more information.  An easy starting point for new tools would be to copy the DateTimeNovaS2SEventHandler to a new file, replacing the tools with something relevant to your use case.
+The main entry point for the VoiceLive integration is in VoiceLiveStreamerFactory.java, where the client is instantiated and the audio streams are established.
 
 The tool set is instantiated in NovaStreamerFactory.createMediaStreamer().  If you create new tools you'll need to update the NovaS2SEventHandler to instantiate your new class.
 

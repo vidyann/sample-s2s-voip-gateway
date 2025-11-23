@@ -6,14 +6,14 @@ $env:VOICE_LIVE_ENDPOINT = "https://<resource>.cognitiveservices.azure.com/"
 $env:VOICE_LIVE_API_KEY = ""
 $env:VOICE_LIVE_MODEL = "gpt-4.1"
 $env:VOICE_LIVE_VOICE = "en-IN-AartiIndicNeural"
-$env:VOICE_LIVE_INSTRUCTIONS = "You are a helpful AI voice assistant. Keep responses VERY brief and concise. Answer in 1-2 sentences maximum. Start the Proactive greeting in English langusge only. Dont repeat the greeting during the conversation"
+$env:VOICE_LIVE_INSTRUCTIONS = "You are a helpful AI voice assistant. Keep responses  brief and concise. Answer in 1-2 sentences maximum. Start the Proactive greeting in English langusge only. Dont repeat the greeting during the conversation"
 $env:VOICE_LIVE_MAX_RESPONSE_OUTPUT_TOKENS = "200"  # Limits response length (default: 200, ~1-2 sentences)
 $env:VOICE_LIVE_TRANSCRIPTION_MODEL = "AZURE_SPEECH"  # Options: AZURE_SPEECH, WHISPER_1
 $env:VOICE_LIVE_TRANSCRIPTION_LANGUAGE = "en-IN"  # Language for Azure Speech (e.g., en-US, es-ES, hi-IN, zh-CN)
 
 # Proactive Greeting Configuration
 $env:VOICE_LIVE_PROACTIVE_GREETING_ENABLED = "true"  # Set to "false" to wait for user to speak first
-$env:VOICE_LIVE_PROACTIVE_GREETING = "Hello! How can I help you today?"  # Bot's first message when call connects
+$env:VOICE_LIVE_PROACTIVE_GREETING = "Hello! I am an AI  assistant from Mandayam Finance. How can I help you today?"  # Bot's first message when call connects
 
 # SIP Configuration for Local Testing (default)
 $env:SIP_LOCAL_ADDRESS = "127.0.0.1"
