@@ -2,7 +2,9 @@
 
 A SIP-to-Voice Live gateway that enables telephone conversations with Azure Voice Live API. Make a phone call and talk to an AI assistant powered by Azure's real-time voice conversation service.
 
-[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](LICENSE)
+> **Licensing note:** This sample is distributed under GPLv2 because it links against the GPLv2-licensed mjSIP SIP stack. Any redistribution or derivative work must therefore remain GPLv2-compatible. See the [License](#-license) section for details.
+
+[![License: GPLv2](https://img.shields.io/badge/License-GPLv2-blue.svg)](LICENSE)
 
 ## 🎯 Overview
 
@@ -441,9 +443,16 @@ $env:DEBUG_SIP = "true"
 
 ## 📄 License
 
-MIT-0 License - See [LICENSE](LICENSE) file for details.
+This project is licensed under the [GNU General Public License v2.0](LICENSE).
 
-This is open source software with no restrictions. Use it freely in commercial and non-commercial projects.
+Because the gateway links against the GPLv2-licensed **mjSIP** stack, any redistribution of this project (modified or unmodified) must remain under GPLv2-compatible terms. To comply:
+
+- Provide the full, corresponding source code for every binary distribution.
+- Include this repository's `LICENSE` and `NOTICE` files with your distribution.
+- Document your modifications (if any) so downstream users understand what changed.
+- When embedding the gateway inside a larger product, ensure the combined work is distributed under GPLv2-compatible terms.
+
+The `NOTICE` file summarizes third-party attributions, including the original MIT-0 sample release from Amazon and the bundled dependencies (mjSIP, Azure SDK, Reactor, Gson, Logback, etc.).
 
 ## 🤝 Contributing
 

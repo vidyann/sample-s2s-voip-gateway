@@ -24,3 +24,7 @@ README-old.md
 # Docker files
 docker/
 Dockerfile
+
+# AWS-specific files
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md

@@ -40,6 +40,17 @@ GitHub provides additional document on [forking a repository](https://help.githu
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 
+## GPLv2 Compliance Checklist
+
+This project is distributed under the GNU GPL v2 because it links against the GPLv2-licensed mjSIP stack. By submitting a contribution you agree that:
+
+- You have the necessary rights to license your contribution under GPLv2 (or GPLv2-or-later).
+- Any new dependencies you add are compatible with GPLv2 and have been documented in the `NOTICE` file.
+- Every new or modified source file includes the GPLv2 header comment (see existing files for the canonical wording).
+- Binary assets, test fixtures, and documentation do not introduce licensing conflicts.
+- You will provide corresponding source code for any new build artifacts you contribute.
+
+
 ## Finding contributions to work on
 Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
 
@@ -56,4 +67,4 @@ If you discover a potential security issue in this project we ask that you notif
 
 ## Licensing
 
-See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+See the [LICENSE](LICENSE) file for our project's licensing. By submitting a pull request you certify that your contribution may be distributed under GPLv2 (or, at your option, any later version) and that you have updated the `NOTICE` file and relevant license headers when required.

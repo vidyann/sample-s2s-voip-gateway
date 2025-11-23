@@ -1,0 +1,14 @@
+Voice Live SIP Gateway Sample
+Copyright (c) 2024 Amazon.com, Inc. or its affiliates.
+
+This product bundles third-party software. Attribution and license information for key dependencies is listed below.
+
+Portions of this project were originally released under the MIT No Attribution license.
+
+- mjSIP 2.0.5 (GPL-2.0) Copyright (c) 2006-2011 Mauro Haumacher and contributors.
+- Azure AI Voice Live SDK (MIT License) Copyright (c) Microsoft Corporation.
+- Reactor Core 3.6.2 (Apache License 2.0) Copyright (c) 2006-2024 VMWare, Inc. or its affiliates.
+- Gson 2.10.1 (Apache License 2.0) Copyright (c) 2008 Google Inc.
+- Logback Classic 1.5.11 (Eclipse Public License 1.0 / GNU LGPL 2.1) Copyright (c) 1999-2024 QOS.ch.
+
+Where required, the full text of each license is provided by the originating project. Copies are available from the respective project websites or package repositories.
