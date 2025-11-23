@@ -21,7 +21,7 @@
          │
 ┌────────▼────────────────────┐
 │  Azure Voice Live API       │
-│  foundrycentin.cognitive... │
+│  resource.cognitive... │
 └─────────────────────────────┘
 ```
 
@@ -52,7 +52,7 @@ $env:SIP_LOCAL_ADDRESS = "127.0.0.1"     # Direct connection
        │ sip:bot@gateway.example.com
        │
 ┌──────▼───────────────────────┐
-│  Voice Live VoIP Gateway     │ (VoIP bridge)
+│  Voice Live SIP Gateway      │ (custom SIP gateway implementation)
 │  gateway.example.com:5060    │
 │  - Registers with SIP server │
 │  - Receives INVITEs          │

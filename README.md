@@ -452,7 +452,7 @@ Because the gateway links against the GPLv2-licensed **mjSIP** stack, any redist
 - Document your modifications (if any) so downstream users understand what changed.
 - When embedding the gateway inside a larger product, ensure the combined work is distributed under GPLv2-compatible terms.
 
-The `NOTICE` file summarizes third-party attributions, including the original MIT-0 sample release from Amazon and the bundled dependencies (mjSIP, Azure SDK, Reactor, Gson, Logback, etc.).
+The `NOTICE` file summarizes third-party attributions, including the original MIT-0 sample release from bundled dependencies (mjSIP, Azure SDK, Reactor, Gson, Logback, etc.).
 
 ## 🤝 Contributing
 
