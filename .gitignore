@@ -2,6 +2,7 @@
 target
 .idea
 *.raw
+*.wav
 .DS_Store
 cdk.out
 dependency-reduced-pom.xml
@@ -13,3 +14,13 @@ node_modules
 start-gateway1.ps1
 logs/
 voiceLiveLogFile
+
+# Generated diagram files
+flow.png
+architecture.png
+VOICELIVE-ARCHITECTURE.md
+README-old.md
+
+# Docker files
+docker/
+Dockerfile
