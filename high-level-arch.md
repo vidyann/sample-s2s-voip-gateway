@@ -40,29 +40,25 @@ $env:SIP_LOCAL_ADDRESS = "127.0.0.1"     # Direct connection
        │
 ┌──────▼───────────────────────┐
 │  SBC (Session Border Ctrl)   │ (e.g., Audiocodes, Oracle, Ribbon)
-│  - NAT Traversal             │
-│  - Security (firewall)       │
-│  - Protocol conversion       │
-│  - Media anchoring           │
-│  - Topology hiding           │
+│                              │
 └──────┬───────────────────────┘
        │ SIP Trunk
        │
 ┌──────▼───────────────────────┐
 │  SIP Server / PBX            │ (e.g., Asterisk, FreeSWITCH, Teams)
-│  - Call routing              │
-│  - User directory            │
-│  - Call features             │
-│  - CDR logging               │
+│                              │
 └──────┬───────────────────────┘
        │ SIP INVITE
        │ sip:bot@gateway.example.com
        │
 ┌──────▼───────────────────────┐
-│  Voice Live VoIP Gateway     │ (Your Java app)
+│  Voice Live VoIP Gateway     │ (VoIP bridge)
 │  gateway.example.com:5060    │
 │  - Registers with SIP server │
 │  - Receives INVITEs          │
+│  - Maintains RTP bridge      │
+│  - Transcodes mu-law <> PCM  │
+│  - Streams audio to Azure    │
 └──────┬───────────────────────┘
        │ HTTPS
        │
